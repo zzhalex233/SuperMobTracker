@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collector;
@@ -289,7 +290,7 @@ public class GuiMobTracker extends GuiScreen {
             if (selected != null && previewSize > 0 &&
                 mouseX >= previewX && mouseX <= previewX + previewSize &&
                 mouseY >= previewY && mouseY <= previewY + previewSize) {
-                Entity entity = analyzer.getEntityInstance(selected);
+                Entity entity = analyzer.getInitializedEntityInstance(selected);
                 if (entity != null) {
                     String entityName = formatEntityName(selected, true);
                     previewModal = new GuiEntityPreviewModal(this, selected, entity, entityName);
@@ -488,6 +489,28 @@ public class GuiMobTracker extends GuiScreen {
         return s;
     }
 
+    private String formatSpawnReason(String spawnReason) {
+        String normalized = spawnReason == null || spawnReason.trim().isEmpty()
+            ? SpawnConditionAnalyzer.NATURAL_SPAWN_REASON
+            : spawnReason.trim().toLowerCase(Locale.ROOT);
+        String translationKey = "gui.mobtracker.spawnReason." + normalized;
+        String translated = I18n.format(translationKey);
+
+        if (!translationKey.equals(translated)) return translated;
+
+        String[] words = normalized.replace('-', ' ').replace('_', ' ').split("\\s+");
+        StringBuilder builder = new StringBuilder();
+
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (builder.length() > 0) builder.append(' ');
+            builder.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) builder.append(word.substring(1));
+        }
+
+        return builder.toString();
+    }
+
     private void drawRightPanel(int mouseX, int mouseY, float partialTicks) {
         int leftWidth = Math.min(width / 2, 250);
         int panelX = leftWidth + 10;
@@ -523,7 +546,7 @@ public class GuiMobTracker extends GuiScreen {
         this.previewSize = previewSizeLocal;
         float previewRotationY = (System.currentTimeMillis() % 10000L) / 10000.0f * 360.0f;
 
-        Entity entity = analyzer.getEntityInstance(selected);
+        Entity entity = analyzer.getInitializedEntityInstance(selected);
 
         // If any modal is open, do not draw preview in panel to avoid overlap
         // Mob rendering has issues with overlapping GUI elements
@@ -628,14 +651,20 @@ public class GuiMobTracker extends GuiScreen {
         textY = drawSingleString(fontRenderer, I18n.format("gui.mobtracker.spawnConditions"), textX, textY, 12, color);
 
         int condsX = textX + 6;
+        String spawnReason = I18n.format("gui.mobtracker.spawnReason", formatSpawnReason(spawnConditions.spawnReason));
+        textY = drawWrappedString(fontRenderer, spawnReason, condsX, textY, 12, textW, dimensionColor);
 
         // Only show spawn condition details if they have valid data
         if (!spawnConditions.failed()) {
-            String lightLevels = I18n.format("gui.mobtracker.lightLevels", Utils.formatRangeFromList(spawnConditions.lightLevels, sep));
-            textY = drawWrappedString(fontRenderer, lightLevels, condsX, textY, 12, textW, lightColor);
+            if (!spawnConditions.lightLevels.isEmpty()) {
+                String lightLevels = I18n.format("gui.mobtracker.lightLevels", Utils.formatRangeFromList(spawnConditions.lightLevels, sep));
+                textY = drawWrappedString(fontRenderer, lightLevels, condsX, textY, 12, textW, lightColor);
+            }
 
-            String yPos = I18n.format("gui.mobtracker.yPos", Utils.formatRangeFromList(spawnConditions.yLevels, sep));
-            textY = drawWrappedString(fontRenderer, yPos, condsX, textY, 12, textW, ylevelColor);
+            if (!spawnConditions.yLevels.isEmpty()) {
+                String yPos = I18n.format("gui.mobtracker.yPos", Utils.formatRangeFromList(spawnConditions.yLevels, sep));
+                textY = drawWrappedString(fontRenderer, yPos, condsX, textY, 12, textW, ylevelColor);
+            }
 
             // Show ground blocks only if this condition was queried (list is non-null)
             if (spawnConditions.groundBlocks != null) {

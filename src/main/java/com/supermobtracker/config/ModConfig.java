@@ -15,6 +15,7 @@ import net.minecraftforge.common.config.Property;
 
 public class ModConfig {
     private static Configuration config;
+    private static File configPath;
 
     // HUD position enum
     public enum HudPosition {
@@ -82,6 +83,7 @@ public class ModConfig {
     );
 
     public static void loadConfigs(File configFile) {
+        configPath = configFile;
         if (config == null) config = new Configuration(configFile);
 
         syncFromFile();
@@ -207,6 +209,21 @@ public class ModConfig {
 
     public static Configuration getConfig() {
         return config;
+    }
+
+    public static File getConfigPath() {
+        return configPath;
+    }
+
+    public static File getSupportDirectory() {
+        File baseDir = configPath != null && configPath.getParentFile() != null
+            ? configPath.getParentFile()
+            : new File("config");
+        File supportDir = new File(baseDir, SuperMobTracker.MODID);
+
+        if (!supportDir.exists()) supportDir.mkdirs();
+
+        return supportDir;
     }
 
     public static boolean isConfigHidden(String name) {

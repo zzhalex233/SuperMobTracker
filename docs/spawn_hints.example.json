@@ -1,0 +1,22 @@
+{
+  "$schema": "./spawn_hints.schema.json",
+  "version": 1,
+  "entries": [
+    {
+      "entityId": "iceandfire:seaserpent",
+      "spawnReason": "worldgen",
+      "biomes": {
+        "types": ["OCEAN"]
+      },
+      "groundBlocks": ["water"],
+      "lightLevels": {
+        "min": 0,
+        "max": 15
+      },
+      "yLevels": {
+        "min": 20,
+        "max": 59
+      }
+    }
+  ]
+}

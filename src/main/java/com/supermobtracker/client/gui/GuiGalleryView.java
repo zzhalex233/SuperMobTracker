@@ -248,7 +248,7 @@ public class GuiGalleryView {
 
                 // Draw entity preview (skip if blacklisted for rendering)
                 if (!ModConfig.shouldRenderEntity(entry.id.toString())) {
-                    Entity entity = analyzer.getEntityInstance(entry.id);
+                    Entity entity = analyzer.getInitializedEntityInstance(entry.id);
                     if (entity != null) {
                         // Use a slightly smaller area for the preview to leave room for the name
                         int previewSize = tileSize - 4;

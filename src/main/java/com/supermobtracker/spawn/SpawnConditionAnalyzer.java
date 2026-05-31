@@ -14,6 +14,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityAgeable;
 import net.minecraft.entity.EntityFlying;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLiving;
@@ -65,6 +66,8 @@ public class SpawnConditionAnalyzer {
         "minecraft:mycelium", "minecraft:clay"
     );
 
+    public static final String NATURAL_SPAWN_REASON = "natural";
+
     // Entity id to CreatureType mapping cache
     private static final Map<ResourceLocation, EnumCreatureType> CREATURE_TYPE_CACHE = buildCreatureTypeCache();
 
@@ -94,6 +97,9 @@ public class SpawnConditionAnalyzer {
     // Entity instance cache
     private Map<ResourceLocation, EntityLiving> entityInstanceCache = new HashMap<>();
 
+    // Lazily initialized entity instances for display helpers.
+    private Map<ResourceLocation, EntityLiving> initializedEntityInstanceCache = new HashMap<>();
+
     // SimulatedWorld cache per dimension ID (avoids initializing a new world each time)
     private static Map<Integer, SimulatedWorld> simulatedWorldCache = new HashMap<>();
 
@@ -103,14 +109,23 @@ public class SpawnConditionAnalyzer {
     // Last error during analysis (if any)
     private Throwable lastError;
 
-    // Whether the last analyzed entity had native biomes
+    // Whether the last analyzed entity had usable biome candidates.
+    // This includes native spawn-table biomes and explicit fallbacks for known worldgen-only mobs.
     private boolean lastHadNativeBiomes;
 
     /**
-     * Returns whether the last analyzed entity had native biomes.
-     * Useful for distinguishing "no native biomes" from "analysis failed".
+     * Returns whether the last analyzed entity had usable biome candidates.
+     * Useful for distinguishing "no biome data" from "analysis failed".
      */
     public boolean hasNativeBiomes() { return lastHadNativeBiomes; }
+
+    public static List<Integer> buildIntRange(int startInclusive, int endInclusive) {
+        List<Integer> values = new ArrayList<>();
+
+        for (int value = startInclusive; value <= endInclusive; value++) values.add(value);
+
+        return values;
+    }
 
     /**
      * Returns the last error that occurred during analysis, or null if none.
@@ -134,6 +149,7 @@ public class SpawnConditionAnalyzer {
         public final Boolean requiresNether;       // null = doesn't matter, true = requires nether-like, false = excludes nether-like
         public final String dimension;
         public final int dimensionId;
+        public final String spawnReason;
 
         public SpawnConditions(List<String> biomes,
                                List<String> groundBlocks,
@@ -146,7 +162,7 @@ public class SpawnConditionAnalyzer {
                                String dimension,
                                int dimensionId) {
             this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
-                 requiresSky, null, null, null, dimension, dimensionId);
+                 requiresSky, null, null, null, dimension, dimensionId, NATURAL_SPAWN_REASON);
         }
 
         public SpawnConditions(List<String> biomes,
@@ -162,6 +178,24 @@ public class SpawnConditionAnalyzer {
                                Boolean requiresNether,
                                String dimension,
                                int dimensionId) {
+              this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
+                  requiresSky, moonPhases, requiresSlimeChunk, requiresNether, dimension, dimensionId, NATURAL_SPAWN_REASON);
+           }
+
+           public SpawnConditions(List<String> biomes,
+                             List<String> groundBlocks,
+                             List<Integer> lightLevels,
+                             List<Integer> yLevels,
+                             List<int[]> timeOfDay,
+                             List<String> weather,
+                             List<String> hints,
+                             Boolean requiresSky,
+                             List<Integer> moonPhases,
+                             Boolean requiresSlimeChunk,
+                             Boolean requiresNether,
+                             String dimension,
+                             int dimensionId,
+                             String spawnReason) {
             this.biomes = biomes;
             this.groundBlocks = groundBlocks;
             this.lightLevels = lightLevels;
@@ -175,12 +209,19 @@ public class SpawnConditionAnalyzer {
             this.requiresNether = requiresNether;
             this.dimension = dimension;
             this.dimensionId = dimensionId;
+            this.spawnReason = spawnReason;
+        }
+
+        private boolean hasNonNaturalSpawnReason() {
+            return spawnReason != null && !NATURAL_SPAWN_REASON.equals(spawnReason);
         }
 
         /**
          * Check if the analysis failed (no valid first sample found).
          */
         public boolean failed() {
+            if (hasNonNaturalSpawnReason()) return false;
+
             boolean hasLightLevels = !lightLevels.isEmpty();
             boolean hasYLevels = !yLevels.isEmpty();
             boolean hasGroundBlocks = groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
@@ -194,6 +235,8 @@ public class SpawnConditionAnalyzer {
          * Check if the spawn conditions are sparse (multiple ranges, which might indicate incomplete analysis).
          */
         public boolean isSparse() {
+            if (hasNonNaturalSpawnReason()) return false;
+
             return Utils.formatRangeFromList(lightLevels, ",").contains(",") ||
                    Utils.formatRangeFromList(yLevels, ",").contains(",") ||
                    (lightLevels.isEmpty() || yLevels.isEmpty()) && !failed();
@@ -612,6 +655,45 @@ public class SpawnConditionAnalyzer {
         return null;
     }
 
+    public EntityLiving getInitializedEntityInstance(ResourceLocation entityId) {
+        if (initializedEntityInstanceCache.containsKey(entityId)) return initializedEntityInstanceCache.get(entityId);
+
+        EntityLiving entity = getEntityInstance(entityId);
+        if (entity == null) {
+            initializedEntityInstanceCache.put(entityId, null);
+            return null;
+        }
+
+        initializeEntityForDisplay(entityId, entity);
+        initializedEntityInstanceCache.put(entityId, entity);
+        return entity;
+    }
+
+    private void initializeEntityForDisplay(ResourceLocation entityId, EntityLiving entity) {
+        World world = entity.world;
+        if (world == null) return;
+
+        entity.setLocationAndAngles(0.5D, Math.max(1, world.getSeaLevel()), 0.5D, 0.0F, 0.0F);
+
+        try {
+            entity.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(entity)), null);
+        } catch (Throwable t) {
+            if (ConditionUtils.shouldShowCrashes()) {
+                SuperMobTracker.LOGGER.error("Error initializing display entity for " + entityId, t);
+            }
+        }
+
+        if (!(entity instanceof EntityAgeable)) return;
+
+        try {
+            ((EntityAgeable) entity).setScaleForAge(((EntityAgeable) entity).isChild());
+        } catch (Throwable t) {
+            if (ConditionUtils.shouldShowCrashes()) {
+                SuperMobTracker.LOGGER.error("Error applying age scale for display entity " + entityId, t);
+            }
+        }
+    }
+
     public boolean isBoss(ResourceLocation entityId) {
         EntityLiving entity = getEntityInstance(entityId);
         return entity != null && !entity.isNonBoss();
@@ -657,7 +739,7 @@ public class SpawnConditionAnalyzer {
     }
 
     public Vec3d getEntitySize(ResourceLocation entityId) {
-        EntityLiving entity = getEntityInstance(entityId);
+        EntityLiving entity = getInitializedEntityInstance(entityId);
         if (entity == null) return new Vec3d(0, 0, 0);
 
         return new Vec3d(entity.width, entity.height, entity.width);
@@ -685,7 +767,14 @@ public class SpawnConditionAnalyzer {
             // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
             lastHadNativeBiomes = nativeBiomes != null && !nativeBiomes.isEmpty();
-            if (!lastHadNativeBiomes)  return null;  // Entities without native biomes cannot spawn naturally
+            if (!lastHadNativeBiomes) {
+                SpawnConditions fallback = ExternalSpawnHints.getSpawnConditions(entityId, entity, isAquatic(entityId), isFlying(entityId));
+                if (fallback == null) return null;
+
+                lastHadNativeBiomes = true;
+                lastResult = fallback;
+                return fallback;
+            }
 
             // Find target dimension for this mob
             int currentDimId = entity.world.provider.getDimension();

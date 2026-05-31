@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Aedial/SuperMobTracker/blob/main/docs/spawn_hints.schema.json",
+  "title": "Super Mob Tracker External Spawn Hints",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "required": ["entries"],
+  "$defs": {
+    "resourceLocation": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"
+    },
+    "lightLevel": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 15
+    },
+    "timeOfDayTick": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 23999,
+      "description": "Minecraft time-of-day tick within a single day cycle. Use 0-23999."
+    },
+    "weather": {
+      "type": "string",
+      "enum": ["clear", "rain", "thunder"]
+    },
+    "intRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer"
+        }
+      }
+    },
+    "lightRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/lightLevel"
+        },
+        "max": {
+          "$ref": "#/$defs/lightLevel"
+        }
+      }
+    },
+    "timeRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/timeOfDayTick"
+        },
+        "end": {
+          "$ref": "#/$defs/timeOfDayTick"
+        }
+      }
+    },
+    "biomes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/resourceLocation"
+          }
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "BiomeDictionary.Type names such as OCEAN, SWAMP, NETHER, or END."
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entityId": {
+          "$ref": "#/$defs/resourceLocation"
+        },
+        "spawnReason": {
+          "type": "string",
+          "description": "Reason shown in the GUI. Known values such as worldgen, structure, spawner, event, command, and other have built-in labels."
+        },
+        "biomes": {
+          "$ref": "#/$defs/biomes"
+        },
+        "dimensionId": {
+          "type": "integer",
+          "description": "Optional. If omitted, Super Mob Tracker tries to infer it from the resolved biome list and otherwise falls back to the current dimension."
+        },
+        "dimensionName": {
+          "type": "string"
+        },
+        "groundBlocks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lightLevels": {
+          "$ref": "#/$defs/lightRange",
+          "description": "Light levels use the vanilla Minecraft range 0-15."
+        },
+        "yLevels": {
+          "$ref": "#/$defs/intRange"
+        },
+        "timeOfDay": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timeRange"
+          },
+          "description": "Time-of-day ranges in ticks, using the 0-23999 day cycle."
+        },
+        "weather": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/weather"
+          },
+          "uniqueItems": true
+        },
+        "requiresSky": {
+          "type": "boolean"
+        },
+        "moonPhases": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          }
+        },
+        "requiresSlimeChunk": {
+          "type": "boolean"
+        },
+        "requiresNether": {
+          "type": "boolean"
+        },
+        "hints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["entityId", "spawnReason"]
+    }
+  }
+}

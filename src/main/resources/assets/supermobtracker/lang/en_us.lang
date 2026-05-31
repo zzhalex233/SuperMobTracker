@@ -49,7 +49,7 @@ gui.mobtracker.separator=,
 gui.mobtracker.noMobSelected=Select a mob from the list
 gui.mobtracker.noSpawnData=No spawn data available
 gui.mobtracker.cannotSpawnNaturally=This entity cannot spawn naturally.
-gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, commands, or special game mechanics (like boss summoning).
+gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, commands, or special game mechanics (like boss summoning). Populate spawn_hints.json (see README) for this entity to show its spawn source and conditions.
 gui.mobtracker.analysisCrashed=Spawn analysis failed.
 gui.mobtracker.analysisCrashedHint=An error occurred while analyzing spawn conditions for this entity.
 gui.mobtracker.noSpawnConditions=Could not determine spawn conditions. This may be due to unhandled spawn requirements or randomness in the spawn check. Try clicking Retry.
@@ -173,6 +173,14 @@ gui.mobtracker.hint.sky=May require sky visibility (surface spawning).
 gui.mobtracker.hint.moonphase=May require a specific moon phase (e.g., full moon).
 gui.mobtracker.hint.slimechunk=May require a slime chunk.
 gui.mobtracker.hint.nether=May require a Nether-like dimension.
+gui.mobtracker.spawnReason=Spawn source: %s
+gui.mobtracker.spawnReason.natural=Natural spawn
+gui.mobtracker.spawnReason.worldgen=Wordgen
+gui.mobtracker.spawnReason.structure=Structure
+gui.mobtracker.spawnReason.spawner=Spawner
+gui.mobtracker.spawnReason.event=Event/script
+gui.mobtracker.spawnReason.command=Command
+gui.mobtracker.spawnReason.other=Unknown/other
 
 # HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=Top Left

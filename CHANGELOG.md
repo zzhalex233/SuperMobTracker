@@ -8,6 +8,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.3.0] - 2026-06-15
+### Added
+- Add JSON-based external spawn hints for mobs that do not use normal biome spawn tables, with documented example and JSON Schema.
+
+### Fixed
+- Fix some scaled mobs showing placeholder-sized previews when their display entity was never spawn-initialized.
+
+
 ## [1.2.5] - 2026-04-06
 ### Added
 - Add entity cards selection screen, an alternative to the mob names list that shows a tiling of entity models instead.
