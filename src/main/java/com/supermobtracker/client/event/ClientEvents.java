@@ -87,28 +87,12 @@ public class ClientEvents {
         if (event.phase != TickEvent.Phase.END) return;
 
         Minecraft mc = Minecraft.getMinecraft();
-        if (mc.world == null || mc.player == null) return;
+        if (mc.world == null) return;
 
         for (Entity entity : mc.world.loadedEntityList) {
-            boolean withinRange = mc.player.getDistanceSq(entity) <= ModConfig.clientDetectionRange * ModConfig.clientDetectionRange;
-            boolean tracked = SpawnTrackerManager.isTracked(entity);
-            boolean allowed = false;
-
-            if (tracked && withinRange) {
-                ResourceLocation entId = EntityList.getKey(entity);
-                allowed = entId != null && ModConfig.isEntityAllowed(entId.toString());
-            }
-
-            if (tracked && withinRange && allowed) {
-                if (!entity.isGlowing()) {
-                    entity.setGlowing(true);
-                    entity.getEntityData().setBoolean("smt_temp_glow", true);
-                }
-            } else {
-                if (entity.getEntityData().getBoolean("smt_temp_glow")) {
-                    entity.setGlowing(false);
-                    entity.getEntityData().removeTag("smt_temp_glow");
-                }
+            if (entity.getEntityData().getBoolean("smt_temp_glow")) {
+                entity.setGlowing(false);
+                entity.getEntityData().removeTag("smt_temp_glow");
             }
         }
     }
