@@ -51,6 +51,7 @@ public class TrackedEntityXrayRenderer {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onRenderWorldLast(RenderWorldLastEvent event) {
         if (renderingXrayPass) return;
+        if (!ModConfig.isClientUseModelXRay()) return;
 
         Minecraft mc = Minecraft.getMinecraft();
         Entity viewer = mc.getRenderViewEntity();
